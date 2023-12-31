@@ -3,7 +3,7 @@ Project Page - [https://Pokemon-PythonRed.github.io]
 Repository   - [https://github.com/Pokemon-PythonRed/Pokemon-PythonRed]
 License      - MIT
 '''
-
+import random
 # import system modules
 from json import dumps, loads
 from math import ceil, floor, sqrt
@@ -61,7 +61,7 @@ text = {
     'ultra': 0.005,
     'debug': 0.0
 }
-text_speed = 'fast'
+text_speed = "fast"
 
 
 def reset_sp(speed) -> None:
@@ -97,33 +97,11 @@ def reset_sp(speed) -> None:
     def sg(text) -> None:
         sp(text, g=True)
 
-
 reset_sp(speed=text[text_speed])
-
-# load screen
-sp('Loading...')
-
 
 # input function:
 def get() -> str:
     return input('> ')
-
-
-# check for required files
-if not (path.isfile(path.join(syspath[0], i)) for i in [
-    'data/dex.json',
-    'data/level.json',
-    'data/trainer_types.json',
-    'data/types.json',
-    'data/moves.json',
-    'data/map.json',
-    'data/pokemart.json',
-    'data/trainers.json',
-    'build_to_exe.py'
-]):
-    get()
-    sysexit()
-
 
 # menu variables
 exit = is_debug = menu_open = options_open = False
@@ -148,7 +126,7 @@ def critical() -> bool:
 class Pokemon:
 
     # set internals
-    def __init__(self, species, level, ivs, moves=None, chp=None, current_xp=0, fainted=False,
+    def __init__(self, species, level, ivs="random", evs="even", moves=None, chp=None, fainted=False,
                  player_pokemon=False) -> None:
         self.species = species
         self.index = dex[self.species]['index']  # type: ignore
@@ -156,9 +134,13 @@ class Pokemon:
         self.type = dex[self.species]['type']  # type: ignore
         self.level = level
         self.ivs = ivs if ivs != 'random' else {i: randint(0, 31) for i in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']}
-        self.level_type = dex[self.species]['xp']  # type: ignore
-        self.total_xp = xp['total'][self.level_type][str(self.level)]  # type: ignore
-        self.current_xp = current_xp
+        if evs == "even":
+            self.evs = {i: 85 for i in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']} # total sum is 510
+        elif evs == "zero":
+            self.evs = {i: 0 for i in ['hp', 'atk', 'def', 'spa', 'spd', 'spe']}
+        else:
+            self.evs = evs
+
         self.moves = moves or find_moves(self.species, self.level)
         self.status = {
             'burn': False,
@@ -175,19 +157,14 @@ class Pokemon:
     # reset stats
     def reset_stats(self, chp=None, fainted=None, player_pokemon=False) -> None:
         self.stats = {
-            'hp': floor(((dex[self.species]['hp'] + self.ivs['hp']) * 2 + floor(
-                ceil(sqrt(self.ivs['hp'])) / 4) * self.level) / 100) + self.level + 10,  # type: ignore
-            'atk': floor(((dex[self.species]['atk'] + self.ivs['atk']) * 2 + floor(
-                ceil(sqrt(self.ivs['atk'])) / 4) * self.level) / 100) + 5,  # type: ignore
-            'def': floor(((dex[self.species]['def'] + self.ivs['def']) * 2 + floor(
-                ceil(sqrt(self.ivs['def'])) / 4) * self.level) / 100) + 5,  # type: ignore
-            'spa': floor(((dex[self.species]['spa'] + self.ivs['spa']) * 2 + floor(
-                ceil(sqrt(self.ivs['spa'])) / 4) * self.level) / 100) + 5,  # type: ignore
-            'spd': floor(((dex[self.species]['spd'] + self.ivs['spd']) * 2 + floor(
-                ceil(sqrt(self.ivs['spd'])) / 4) * self.level) / 100) + 5,  # type: ignore
-            'spe': floor(((dex[self.species]['spe'] + self.ivs['spe']) * 2 + floor(
-                ceil(sqrt(self.ivs['spe'])) / 4) * self.level) / 100) + 5  # type: ignore
+            "hp": floor(0.01 * (2 * dex[self.species]["hp"] + self.ivs["hp"] + floor(0.25 * self.evs["hp"])) * self.level) + self.level + 10,
+            "atk": floor(0.01 * (2 * dex[self.species]["atk"] + self.ivs["atk"] + floor(0.25 * self.evs["atk"])) * self.level) + 5,
+            'def': floor(0.01 * (2 * dex[self.species]["def"] + self.ivs["def"] + floor(0.25 * self.evs["def"])) * self.level) + 5,
+            'spa': floor(0.01 * (2 * dex[self.species]["spa"] + self.ivs["spa"] + floor(0.25 * self.evs["spa"])) * self.level) + 5,
+            'spd': floor(0.01 * (2 * dex[self.species]["spd"] + self.ivs["spd"] + floor(0.25 * self.evs["spd"])) * self.level) + 5,
+            'spe': floor(0.01 * (2 * dex[self.species]["spe"] + self.ivs["spe"] + floor(0.25 * self.evs["spe"])) * self.level) + 5,
         }
+
         if player_pokemon == False:
             for move in self.moves:
                 move['pp'] = list(filter(lambda m, move=move: m['name'] == move['name'], moves))[0][
@@ -196,14 +173,6 @@ class Pokemon:
         self.fainted = fainted or self.stats['chp'] <= 0
         if self.fainted:
             self.stats['chp'] = 0
-
-    def check_level_up(self) -> None:
-        while self.current_xp >= xp['next'][self.level_type][str(self.level)]:  # type: ignore
-            self.current_xp -= xp['next'][self.level_type][str(self.level)]  # type: ignore
-            self.level_up(self)
-            if self.level == 100:
-                sp(f'\nCongratulations, {self.name} has reached level 100!')
-                break
 
     # check if pokemon is fainted
     def check_fainted(self) -> bool:
@@ -230,10 +199,17 @@ class Pokemon:
     def damage_calc(self, move_entry, attacker):
         is_critical = critical()
         attack_defense = ('atk', 'def') if move_entry['damage_class'] == 'physical' else ('spa', 'spd')
-        result = floor((((((2 * attacker.level * (2 if is_critical else 1) / 5) + 2) * move_entry['power'] *
-                          attacker.stats[attack_defense[0]] / self.stats[attack_defense[1]]) / 50) + 2) * (
-                           1.5 if move_entry['type'] == attacker.type else 1) * randint(217, 255) / 255 * (
-                           type_effectiveness(move_entry, self) if save['flag']['been_to_route_1'] else 1))
+
+        if move_entry["power"]:
+            power = move_entry["power"]
+        else:
+            power = 0
+
+        base_result = (2/5 * attacker.level * (2 if is_critical else 1) + 2) * (power * attacker.stats[attack_defense[0]] / self.stats[attack_defense[1]]) / 50 + 2
+        type_effect = type_effectiveness(move_entry, self)
+        stab = 1.5 if move_entry["type"] == attacker.type else 1
+        rand_effect = randint(217, 255) / 255
+        result = floor(base_result * type_effect * stab * rand_effect)
 
         self.stats['chp'] -= result
         if result > 0:
@@ -259,62 +235,6 @@ class Pokemon:
         if self.fainted:
             sp(f'\n{self.name} fainted!')
 
-    # calculate xp rewarded after battle
-    def calculate_xp(self, battle_type='wild') -> int:
-        return ceil((self.total_xp * self.level * (1 if battle_type == 'wild' else 1.5)) / 7)  # type: ignore
-
-    # give xp from opponent pokemon to party in battle
-    def give_xp(self, participating_pokemon, type="wild"):
-        total_xp = self.calculate_xp(type)  # type: ignore
-        debug(f'total xp: {total_xp}')
-        if 'EXP. ALL' in save['bag']:
-            for p in participating_pokemon:
-                save['party'][p].current_xp += floor(total_xp / (len(participating_pokemon) + 1))
-                sg(f'{save["party"][p].name} gained {floor(total_xp / (len(participating_pokemon) + 1))} XP!')
-                save['party'][p].check_level_up()
-
-            other_pokemon = [pokemon for pokemon in save['party'] if pokemon not in participating_pokemon]
-            for o in other_pokemon:
-                save['party'][o].current_xp += floor((total_xp / (len(participating_pokemon) + 1)) / len(other_pokemon))
-                sg(f'{save["party"][o].name} gained {floor((total_xp / (len(participating_pokemon) + 1)) / len(other_pokemon))} XP!')
-                save['party'][o].check_level_up()
-
-        else:
-            for p in participating_pokemon:
-                save['party'][p].current_xp += floor(total_xp / len(participating_pokemon))
-                sg(f'{save["party"][p].name} gained {floor(total_xp / len(participating_pokemon))} XP!')
-                save['party'][p].check_level_up()
-            sp("")
-        sleep(0.5)
-
-    # evolve pokemon
-    def evolve(self):
-        sp(f'\nWhat? {self.name} is evolving!')
-        input_cancel = getch()
-        # for _ in range(3):
-        if input_cancel in ['e', 'b']:
-            sg(f'{self.name} didn\'t evolve')
-            return
-
-        sleep(0.5)
-        print("...")
-        sleep(2)
-
-        self.index += 1
-        old_name = self.name
-        for p in dex.keys():  # type: ignore
-            if dex[p]['index'] == self.index:  # type: ignore
-                self.species = p
-                self.name = dex[self.species]['name']  # type: ignore
-        self.reset_stats()
-        sg(f'\n{old_name} evolved into {self.species}!')  # type: ignore
-
-        save['dex'][self.species] = {'seen': True, 'caught': True}
-        save['flag']['type'][self.type] = {'seen': True, 'caught': True}
-        for move in dex[self.species]['moves']:  # type: ignore
-            # TODO: Possibly keep track of moves that were forgotten too and not reprompt to learn as well?
-            if move['level'] <= self.level and move['name'] not in (m['name'] for m in self.moves):
-                self.learn_move(move)
 
     def learn_move(self, move):
         if len(self.moves) == 4:
@@ -356,17 +276,6 @@ class Pokemon:
             self.moves.append({"name": move['name'],
                                "pp": list(filter(lambda mv, move=move: mv['name'] == move['name'], moves))[0][
                                    'pp']})  # type: ignore
-
-    # raw level up
-    def level_up(self, pokemon):
-        pokemon.level += 1
-        pokemon.reset_stats()
-        sg(f'{pokemon.name} grew to level {pokemon.level}!')
-        if ('evolution' in dex[pokemon.species] and pokemon.level >= dex[pokemon.species]['evolution']):  # type: ignore
-            pokemon.evolve()
-        for m in dex[pokemon.species]['moves']:  # type: ignore
-            if m['level'] == pokemon.level:
-                pokemon.learn_move(m)
 
     # catch Pokemon
     def catch(self, ball: str) -> bool:
@@ -495,7 +404,6 @@ def find_moves(name, level) -> list:
     else:
         return list(map(lambda m: {"name": m['name'], "pp": m["pp"]}, learned_moves))
 
-
 # switch pokemon in battle
 def switch_pokemon(party_length: int) -> Union[int, str]:
     sp(f'''\nWhich Pokémon should you switch to?\n\n{
@@ -522,8 +430,7 @@ def switch_pokemon(party_length: int) -> Union[int, str]:
 
 
 # create battle process
-def battle(opponent_party=None, battle_type='wild', name=None, title=None, start_diagloue=None, end_dialouge=None,
-           earn_xp=True) -> None:
+def battle(opponent_party=None, battle_type='wild', name=None, title=None, start_diagloue=None, end_dialouge=None) -> None:
     global save
     debug('Entered battle!')
     debug(f'Party: {[i.name for i in save["party"]]}')
@@ -713,8 +620,12 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
             opponent_attacked_this_turn = True
 
         # player attack if player speed is lower
-        if save['party'][current].check_fainted() and opponent_party[
-            opponent_current].check_fainted() and not player_attacked_this_turn and escape_attempts == 0 and not catch_attempt and not switched:  # type: ignore
+        if (not save['party'][current].check_fainted() and
+            not opponent_party[opponent_current].check_fainted() and
+            not player_attacked_this_turn and
+            not escape_attempts and
+            not catch_attempt and
+            not switched):
             damage = opponent_party[opponent_current].deal_damage(save['party'][current], chosen_move)  # type: ignore
             if chosen_move["name"] == "struggle":  # type: ignore
                 save['party'][current].deal_struggle_damage(damage)
@@ -722,9 +633,8 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
                 save["party"][current].moves[int(move_choice) - 1]['pp'] -= 1  # type: ignore
             player_attacked_this_turn = True
 
-        # give XP when opponent faints
-        if opponent_party[opponent_current].check_fainted() and earn_xp == True:  # type: ignore
-            opponent_party[opponent_current].give_xp(participating_pokemon, battle_type)  # type: ignore
+        # trainer switches pokemon when opponent faints
+        if opponent_party[opponent_current].check_fainted():  # type: ignore
             if battle_type == "trainer" and is_alive(opponent_party):
                 opponent_current += 1
                 sp(f'\n{name if name else title} sent out {opponent_party[opponent_current].name}!')  # type: ignore
@@ -758,32 +668,18 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
 
     # upon winning
     elif is_alive(save['party']) and not is_alive(opponent_party):
-        if save['flag']['been_to_route_1']:
-            if battle_type == 'trainer':
-                sg(f'\n{save["name"]} won the battle!')
-                save['money'] += prize_money(opponent_party, title)  # type: ignore
-                sg(f'You recieved ¥{prize_money(opponent_party, title)} as prize money.')  # type: ignore
-                sg(f'\n{name if name else title}: {end_dialouge}')
-        else:
-            save['flag']['won_first_battle'] = True
+        sg(f'\n{save["name"]} won the battle!')
+        sg(f'\n{name if name else title}: {end_dialouge}')
 
     # upon losing
     elif is_alive(opponent_party) and (not is_alive(save['party'])):
-        if battle_type == 'trainer':
-            if save['flag']['been_to_route_1']:
-                sg('You lost the battle!')
-                sg(f'You gave ¥{round(save["money"] / 2)} as prize money.')
-            else:
-                save['flag']['won_first_battle'] = False
+        sg('You lost the battle!')
         sg('...')
         sg(f'{save["name"]} blacked out!')
-        save['money'] = round(save['money'] / 2)
-        save['location'] = save['recent_center']
 
         for i in save['party']:
             i.reset_stats()
             sp(f'{i.name} was healed to max health.')
-
 
     # if battle is neither won nor lost
     else:
@@ -806,54 +702,34 @@ def debug(text) -> None:
 # main loop
 if __name__ == '__main__':
 
-    # load data from files
-    # for i in [
-    #     ['dex', 'dex.json'],
-    #     ['items', 'item.json'],
-    #     ['moves', 'moves.json'],
-    #     ['rates', 'map.json'],
-    #     ['save_template', 'save_template.json'],
-    #     ['trainer_types', 'trainer_types.json'],
-    #     ['types', 'types.json'],
-    #     ['xp', 'level.json'],
-    #     ['pokemart', 'pokemart.json'],
-    #     ['trainers', 'trainers.json']
-    # ]:
-    #     try:
-    #         exec(
-    #             f'{i[0]} = loads(open(path.join(syspath[0], "data", "{i[1]}"), encoding="utf8").read())\nopen(path.join(syspath[0], "data", "{i[1]}")).close()')
-    #     except Exception:
-    #         abort(f'Failed to load {i[1]}!')
-
     dex = loads(open(path.join(syspath[0], "data", 'dex.json'), encoding="utf8").read())
     items = loads(open(path.join(syspath[0], "data", 'item.json'), encoding="utf8").read())
     moves = loads(open(path.join(syspath[0], "data", "moves.json"), encoding="utf8").read())
-    rates = loads(open(path.join(syspath[0], "data", "map.json"), encoding="utf8").read())
     save_template = loads(open(path.join(syspath[0], "data", 'save_template.json'), encoding="utf8").read())
-    trainer_types = loads(open(path.join(syspath[0], "data", 'trainer_types.json'), encoding="utf8").read())
     types = loads(open(path.join(syspath[0], "data", 'types.json'), encoding="utf8").read())
-    xp = loads(open(path.join(syspath[0], "data", "level.json"), encoding="utf8").read())
-    pokemart = loads(open(path.join(syspath[0], "data", "pokemart.json"), encoding="utf8").read())
-    trainers = loads(open(path.join(syspath[0], "data", "trainers.json"), encoding="utf8").read())
 
     option = dex_string = ''
     # intro
     playerName = 'RED'
     save = save_template  # type: ignore
-    save['options']['text_speed'] = 'normal'
-    # save['starter'] = 'CHARMANDER'
-    save['starter'] = 'MEW'
-    save['dex'] = {save['starter']: {'seen': True, 'caught': True}}
-    save['flag']['type'] = {
-        dex[save['starter']]['type']: {'seen': True, 'caught': True}}  # type: ignore
-
+    save['options']['text_speed'] = 'ultra'
     level = 50
+    all_pokemon_specious = list(dex.keys())
 
-    save['party'].append(Pokemon(save['starter'], level, 'random', find_moves(save['starter'], level)))
+    # items
+    # status poison, paralysis, sleep, burn, frozen
 
-    # encounter = get_encounter('route1-n', 'tall-grass')
-    # battle([Pokemon(encounter['pokemon'], encounter['l1evel'], 'random')])
+    for i in range(1):
+        idx = randint(0, 155)
+        species = all_pokemon_specious[idx]
+        save['party'].append(Pokemon(species, level, 'random', "even", find_moves(species, level)))
 
-    battle([Pokemon("MEWTWO", level, 'random', find_moves("MEWTWO", level))])
+    opponent_party = []
+    for i in range(1):
+        idx = randint(0, 155)
+        species = all_pokemon_specious[idx]
+        opponent_party.append(Pokemon(species, level, 'random', "even", find_moves(species, level)))
+
+    battle(opponent_party, battle_type="trainer", name="Sihao", title="Pokemon Master", start_diagloue="Let's battle!")
 
 # end program
