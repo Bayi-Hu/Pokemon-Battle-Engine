@@ -685,7 +685,6 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
     else:
         abort('\nInvalid battle state; neither won, lost, caught, nor escaped. Could not load player turn.')
 
-
 def get_encounter(loc, type) -> dict:
     pokemon = []
     weights = []
