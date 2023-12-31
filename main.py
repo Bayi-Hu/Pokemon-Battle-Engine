@@ -127,13 +127,21 @@ class Pokemon:
             self.evs = evs
 
         self.moves = moves or find_moves(self.species, self.level)
-        self.status = {
+        self.no_volatile_status = {
             'burn': False,
-            'confusion': False,
             'freeze': False,
             'paralysis': False,
             'poison': False,
             'sleep': False
+        }
+        self.volatile_status = {
+            'confusion': False,
+            'atk': 0,
+            'def': 0,
+            'spa': 0,
+            'spd': 0,
+            'spe': 0,
+            'acc': 0
         }
 
         # initialise stats
@@ -441,11 +449,9 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
 
             elif item == "Full Heal":
                 # set no-volatile status to false
-                save['party'][current].status["burn"] = False
-                save['party'][current].status["freeze"] = False
-                save['party'][current].status["paralysis"] = False
-                save['party'][current].status["poison"] = False
-                save['party'][current].status["sleep"] = False
+                # TODO:
+                # for save['party'][current].no_volatile_status
+
                 sp(f"{save['party'][current].name} was healed to normal status")
                 used_item = True
 
@@ -536,10 +542,10 @@ if __name__ == '__main__':
 
     option = dex_string = ''
     # intro
-    playerName = 'RED'
     save = save_template  # type: ignore
+    save["name"] = 'RED'
     save['options']['text_speed'] = 'ultra'
-    level = 50
+    level = 100
     all_pokemon_specious = list(dex.keys())
 
     # items
