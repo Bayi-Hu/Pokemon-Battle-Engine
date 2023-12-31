@@ -245,7 +245,8 @@ def use_item(battle=False) -> str:  # type: ignore
         if item in save['bag']:
             if save['bag'][item] > 0:
                 save['bag'][item] -= 1
-                # exec(items[item]['command']) # type: ignore
+                if save['bag'][item] == 0:
+                    save['bag'].pop(item, None)
                 return item
             else:
                 sp('You have none of that item!')
@@ -338,6 +339,7 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
         player_attacked_this_turn = False
         opponent_attacked_this_turn = False
         switched = False
+        used_item = False
 
         # calculate health bars according to ratio (chp:hp)
         bars = ceil((save['party'][current].stats['chp'] / (save['party'][current].stats['hp'])) * bars_length)
@@ -432,6 +434,20 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
             item = use_item(battle=True)
             if item == "exit":
                 continue
+            elif item == "Full Restore":
+                save['party'][current].stats['chp'] = save['party'][current].stats['hp']
+                sp(f"{save['party'][current].name} was healed to max health")
+                used_item = True
+
+            elif item == "Full Heal":
+                # set no-volatile status to false
+                save['party'][current].status["burn"] = False
+                save['party'][current].status["freeze"] = False
+                save['party'][current].status["paralysis"] = False
+                save['party'][current].status["poison"] = False
+                save['party'][current].status["sleep"] = False
+                sp(f"{save['party'][current].name} was healed to normal status")
+                used_item = True
 
         # opponent attack
         if not save['party'][current].check_fainted() and not opponent_party[
@@ -444,6 +460,7 @@ def battle(opponent_party=None, battle_type='wild', name=None, title=None, start
         if (not save['party'][current].check_fainted() and
             not opponent_party[opponent_current].check_fainted() and
             not player_attacked_this_turn and
+            not used_item and
             not switched):
             damage = opponent_party[opponent_current].deal_damage(save['party'][current], chosen_move)  # type: ignore
             if chosen_move["name"] == "struggle":  # type: ignore
@@ -526,6 +543,10 @@ if __name__ == '__main__':
     all_pokemon_specious = list(dex.keys())
 
     # items
+    save["bag"] = {
+        "Full Restore": 3,
+        "Full Heal": 3
+    }
     # status poison, paralysis, sleep, burn, frozen
 
     for i in range(1):
@@ -539,7 +560,8 @@ if __name__ == '__main__':
         species = all_pokemon_specious[idx]
         opponent_party.append(Pokemon(species, level, 'random', "even", find_moves(species, level)))
 
-    # save["bag"]
+
+
     battle(opponent_party, battle_type="trainer", name="Sihao", title="Pokemon Master", start_diagloue="Let's battle!")
 
 # end program
